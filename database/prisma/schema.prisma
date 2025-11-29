@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenant: Each Shopify store is a tenant
+model Tenant {
+  id                String    @id @default(cuid())
+  name              String
+  shopifyDomain     String    @unique // e.g., "mystore.myshopify.com"
+  shopifyAccessToken String
+  shopifyApiKey     String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  users             User[]
+  customers         Customer[]
+  orders            Order[]
+  products          Product[]
+  customEvents      CustomEvent[]
+  
+  @@index([shopifyDomain])
+}
+
+// User authentication for tenant access
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String    // hashed
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role          String    @default("viewer") // admin, viewer
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([tenantId])
+  @@index([email])
+}
+
+// Shopify Customer data
+model Customer {
+  id                String    @id @default(cuid())
+  shopifyCustomerId String    // Shopify's customer ID
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  email             String?
+  firstName         String?
+  lastName          String?
+  phone             String?
+  ordersCount       Int       @default(0)
+  totalSpent        Decimal   @default(0) @db.Decimal(10, 2)
+  state             String?   // enabled, disabled, invited, declined
+  tags              String?   // Comma-separated tags
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  shopifyCreatedAt  DateTime?
+  shopifyUpdatedAt  DateTime?
+  
+  // Relations
+  orders            Order[]
+  
+  @@unique([tenantId, shopifyCustomerId])
+  @@index([tenantId])
+  @@index([email])
+}
+
+// Shopify Product data
+model Product {
+  id                String    @id @default(cuid())
+  shopifyProductId  String    // Shopify's product ID
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  title             String
+  vendor            String?
+  productType       String?
+  status            String?   // active, archived, draft
+  tags              String?
+  handle            String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  shopifyCreatedAt  DateTime?
+  shopifyUpdatedAt  DateTime?
+  
+  // Relations
+  orderItems        OrderItem[]
+  
+  @@unique([tenantId, shopifyProductId])
+  @@index([tenantId])
+}
+
+// Shopify Order data
+model Order {
+  id                String    @id @default(cuid())
+  shopifyOrderId    String    // Shopify's order ID
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  orderNumber       Int?
+  email             String?
+  totalPrice        Decimal   @db.Decimal(10, 2)
+  subtotalPrice     Decimal?  @db.Decimal(10, 2)
+  totalTax          Decimal?  @db.Decimal(10, 2)
+  currency          String    @default("USD")
+  financialStatus   String?   // pending, authorized, paid, refunded, voided
+  fulfillmentStatus String?   // fulfilled, partial, unfulfilled
+  
+  billingAddress    Json?
+  shippingAddress   Json?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  shopifyCreatedAt  DateTime?
+  shopifyUpdatedAt  DateTime?
+  
+  // Relations
+  items             OrderItem[]
+  
+  @@unique([tenantId, shopifyOrderId])
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([shopifyCreatedAt])
+}
+
+// Order line items
+model OrderItem {
+  id                String    @id @default(cuid())
+  orderId           String
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId         String?
+  product           Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  shopifyProductId  String?
+  shopifyVariantId  String?
+  title             String
+  quantity          Int
+  price             Decimal   @db.Decimal(10, 2)
+  
+  createdAt         DateTime  @default(now())
+  
+  @@index([orderId])
+  @@index([productId])
+}
+
+// Custom events (Bonus: cart abandoned, checkout started, etc.)
+model CustomEvent {
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  eventType         String    // cart_abandoned, checkout_started, product_viewed, etc.
+  shopifyCustomerId String?
+  email             String?
+  data              Json      // Event-specific data
+  
+  createdAt         DateTime  @default(now())
+  
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([createdAt])
+}
