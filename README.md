@@ -333,6 +333,5 @@ This project is developed as part of the Xeno FDE Internship Assignment.
 - Shopify for excellent API documentation
 - Next.js and Prisma teams
 
----
 
-**Built with ❤️ for Xeno FDE Internship Assignment**
+
