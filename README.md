@@ -17,9 +17,13 @@ xeno/
 │   ├── package.json
 │   └── README.md
 │
-├── backend/                  # API backend services (Port 3001)
-│   ├── app/api/              # Auth, webhooks, analytics, sync
-│   ├── lib/                  # Shopify service, auth config
+├── backend/                  # Express.js API backend (Port 3001)
+│   ├── src/
+│   │   ├── controllers/      # Auth, webhooks, analytics, sync
+│   │   ├── routes/           # Express route definitions
+│   │   ├── middleware/       # Auth, error handling
+│   │   ├── services/         # Shopify sync service
+│   │   └── config/           # Database config
 │   ├── package.json
 │   └── README.md
 │
@@ -46,7 +50,7 @@ xeno/
 - ✅ **Real-time Data Sync**: Webhook-based instant updates
 - ✅ **Scheduled Sync**: Backup cron job every 6 hours
 - ✅ **Analytics Dashboard**: KPIs, trends, and insights
-- ✅ **Email Authentication**: Secure login with NextAuth.js
+- ✅ **JWT Authentication**: Secure login with bcrypt hashing
 - ✅ **Role-based Access**: Admin and user roles
 
 ### Technical Highlights
@@ -56,7 +60,9 @@ xeno/
 - 🎨 Responsive UI with TailwindCSS
 - 🛡️ Type-safe with TypeScript
 - 🗄️ PostgreSQL with Prisma ORM
-- ⚡ Next.js 14 App Router
+- ⚡ Next.js 14 App Router + Express.js REST API
+- 🔒 Security middleware (helmet, CORS, rate limiting)
+- ⏰ Scheduled cron jobs with node-cron
 
 ## 🚀 Quick Start
 
@@ -169,9 +175,9 @@ xeno/
 ## 📁 Package Details
 
 | Package | Tech Stack | Port | Purpose |
-|---------|-----------|------|---------|
+|---------|-----------|------|---------||
 | **Frontend** | Next.js 14, React, TailwindCSS, Recharts | 3000 | User interface with dashboard |
-| **Backend** | Next.js API, NextAuth, Shopify API | 3001 | API endpoints and webhooks |
+| **Backend** | Express.js, JWT, bcryptjs, node-cron | 3001 | REST API endpoints and webhooks |
 | **Database** | PostgreSQL, Prisma ORM | - | Data persistence (7 models) |
 
 ## 🔧 Environment Variables
@@ -184,18 +190,18 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/xeno_shopify"
 ### Backend (`.env`)
 ```env
 DATABASE_URL="postgresql://user:pass@localhost:5432/xeno_shopify"
-NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
-NEXTAUTH_URL="http://localhost:3001"
+PORT=3001
+JWT_SECRET="generate-with-openssl-rand-base64-32"
+JWT_EXPIRES_IN="7d"
 SHOPIFY_WEBHOOK_SECRET="your-webhook-secret"
 CRON_SECRET="your-cron-secret"
 ALLOWED_ORIGINS="http://localhost:3000"
+NODE_ENV="development"
 ```
 
 ### Frontend (`.env`)
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:3001"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="same-as-backend-secret"
 ```
 
 ## 📖 Documentation
@@ -271,8 +277,9 @@ npm start           # Production server
 
 ### Authentication
 - `POST /api/auth/register` - Register tenant
-- `POST /api/auth/signin` - Login
-- `POST /api/auth/signout` - Logout
+- `POST /api/auth/login` - Login
+- `POST /api/auth/logout` - Logout
+- `GET /api/auth/me` - Get current user
 
 ### Webhooks
 - `POST /api/webhooks/customers` - Customer events
@@ -284,8 +291,8 @@ npm start           # Production server
 - `GET /api/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` - Dashboard data
 
 ### Sync
-- `POST /api/sync` - Scheduled sync (cron)
-- `POST /api/sync/manual` - Manual sync trigger
+- `POST /api/sync` - Scheduled sync (cron with secret)
+- `POST /api/sync/manual` - Manual sync trigger (authenticated)
 
 ## 🏆 Assignment Completion
 
@@ -304,15 +311,17 @@ This project fulfills all Xeno FDE Internship Assignment requirements:
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | Frontend | Next.js 14, React 18, TypeScript |
-| Backend | Next.js API Routes, NextAuth.js |
+| Backend | Express.js, Node.js, TypeScript |
 | Database | PostgreSQL, Prisma ORM |
 | Styling | TailwindCSS |
 | Charts | Recharts |
-| Auth | NextAuth.js with JWT |
+| Auth | JWT with bcryptjs, httpOnly cookies |
+| Security | helmet, CORS, express-rate-limit |
+| Scheduling | node-cron |
 | API | Shopify Admin API 2024-01 |
-| Deployment | Vercel, Railway |
+| Deployment | Vercel (Frontend), Railway (Backend) |
 
 ## 🤝 Contributing
 
